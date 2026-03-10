@@ -148,8 +148,23 @@
             <p class="text-gray-500 mb-8 text-xs md:text-sm">Silakan buat atau gabung ke kelas aktif.</p>
             
             <div id="setup-guru" class="hidden space-y-4">
-                <input type="text" id="nama-kelas-baru" placeholder="Nama Kelas (Contoh: Tahfidz Jilid 2)" class="w-full border-2 py-3 md:py-4 px-4 rounded-xl bg-gray-50 focus:border-emerald-500 outline-none transition-all text-center font-semibold text-base md:text-lg">
-                <button onclick="buatKelas()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 md:py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl">Buat Kelas Baru</button>
+                <div class="p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
+                    <p class="text-xs font-bold text-emerald-400 mb-3 uppercase tracking-wider text-left"><i class="fas fa-cloud-download-alt mr-1"></i> Pulihkan / Import Kelas</p>
+                    <input type="text" id="input-kode-guru" placeholder="KODE KELAS LAMA..." class="w-full border-2 py-3 px-4 rounded-xl bg-gray-50 focus:border-emerald-500 outline-none transition-all text-center uppercase tracking-[0.3em] font-extrabold text-lg text-emerald-600 mb-3">
+                    <button onclick="importKelasGuru()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl font-bold transition-all shadow-md"><i class="fas fa-sync-alt mr-2"></i>Tarik Data Kelas</button>
+                </div>
+
+                <div class="flex items-center justify-center space-x-2 my-2">
+                    <div class="h-px bg-slate-700 w-1/4"></div>
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Atau</span>
+                    <div class="h-px bg-slate-700 w-1/4"></div>
+                </div>
+
+                <div class="p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
+                    <p class="text-xs font-bold text-emerald-400 mb-3 uppercase tracking-wider text-left"><i class="fas fa-plus-circle mr-1"></i> Buka Kelas Baru</p>
+                    <input type="text" id="nama-kelas-baru" placeholder="Nama Kelas Baru (Cth: Tahfidz Jilid 2)" class="w-full border-2 py-3 px-4 rounded-xl bg-gray-50 focus:border-emerald-500 outline-none transition-all text-center font-semibold text-base mb-3">
+                    <button onclick="buatKelas()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl">Buat Kelas Baru</button>
+                </div>
             </div>
             
             <div id="setup-murid" class="hidden space-y-4">
@@ -502,7 +517,7 @@
     let riwayatJawabanMurid = {};
 
     // Export variables to window
-    window.login = login; window.logout = logout; window.buatKelas = buatKelas; window.gabungKelas = gabungKelas;
+    window.login = login; window.logout = logout; window.buatKelas = buatKelas; window.gabungKelas = gabungKelas; window.importKelasGuru = importKelasGuru;
     window.bukaMenu = bukaMenu; window.simpanAbsenMassal = simpanAbsenMassal; window.simpanNilai = simpanNilai;
     window.simpanSoal = simpanSoal; window.toggleTipeSoal = toggleTipeSoal; window.kirimSemuaJawaban = kirimSemuaJawaban;
     window.lihatJawaban = lihatJawaban; window.simpanFeedback = simpanFeedback;
@@ -648,6 +663,22 @@ onAuthStateChanged(auth, async (user) => {
         }
     }
 
+    async function importKelasGuru() {
+        const kode = document.getElementById('input-kode-guru').value.toUpperCase().trim();
+        if(!kode) return alert("Masukkan kode kelas lama Anda untuk ditarik datanya!");
+
+        const q = query(collection(db, "kelas"), where("kode", "==", kode));
+        const snapshot = await getDocs(q);
+        
+        if(snapshot.empty) {
+            alert("Data kelas tidak ditemukan. Pastikan kode kelas yang dimasukkan sudah benar!");
+        } else {
+            const dataKelas = snapshot.docs[0].data();
+            masukDashboard(dataKelas);
+            alert("Berhasil! Semua data kelas lama berhasil dipulihkan.");
+        }
+    }
+
     // --- 4. RENDER DASHBOARD ---
     function masukDashboard(dataKelas) {
         currentClass = dataKelas;
@@ -671,7 +702,7 @@ onAuthStateChanged(auth, async (user) => {
 
         const menu = document.getElementById('sidebar-menu');
         
-        // Render Navbar (Tambahkan Menu Pengaturan di bawah)
+        // Render Navbar
         if(currentUser.role === 'guru') {
             menu.innerHTML = `
                 <a href="#" onclick="bukaMenu('beranda', 'Beranda', this)" class="sidebar-item active block px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-700 hover:text-white mb-1"><i class="fas fa-home w-5 mr-1 text-center"></i> Beranda</a>
@@ -1477,4 +1508,4 @@ onAuthStateChanged(auth, async (user) => {
     }
 </script>
 </body>
-    </html>
+                        </html>
