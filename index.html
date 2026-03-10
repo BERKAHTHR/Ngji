@@ -89,6 +89,30 @@
         </div>
     </div>
 
+    <div id="name-setup-screen" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-800 via-teal-700 to-slate-900 relative">
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-20 pointer-events-none">
+            <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-emerald-400 blur-3xl"></div>
+            <div class="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-teal-300 blur-3xl"></div>
+        </div>
+        <div class="glass-card p-10 rounded-3xl shadow-2xl w-full max-w-md z-10 text-center transform transition-all">
+            <div class="inline-block p-4 rounded-full bg-blue-50 mb-4 shadow-inner">
+                <i class="fas fa-user-edit text-5xl text-blue-600"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold text-gray-800 mb-2">Lengkapi Profil</h2>
+            <p class="text-sm text-gray-500 mb-6">Silakan ketik nama asli/resmi Anda untuk absen dan rapor. (Jangan gunakan nama samaran akun Google)</p>
+            
+            <div class="space-y-4">
+                <div class="relative">
+                    <i class="fas fa-signature absolute left-4 top-3.5 text-gray-400"></i>
+                    <input type="text" id="custom-user-name" class="w-full border-2 border-gray-200 rounded-xl py-3 pl-11 pr-4 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all font-bold text-gray-700" placeholder="Ketik nama lengkap...">
+                </div>
+                <button onclick="simpanNamaCustom()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5">
+                    Lanjutkan <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="setup-screen" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
         <div class="glass-card p-10 rounded-3xl shadow-2xl w-full max-w-md text-center z-10">
             <div class="mb-8 text-emerald-500"><i class="fas fa-door-open text-5xl"></i></div>
@@ -362,15 +386,15 @@
     import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where, doc, setDoc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBZJz_Y81DR_HX2nIHBQ1-J5SYadfzjR7A",
-    authDomain: "tahsin-smart.firebaseapp.com",
-    projectId: "tahsin-smart",
-    storageBucket: "tahsin-smart.firebasestorage.app",
-    messagingSenderId: "573220218402",
-    appId: "1:573220218402:web:ceea8c3626a00da0d84c7b",
-    measurementId: "G-KH32CXNR8R"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZJz_Y81DR_HX2nIHBQ1-J5SYadfzjR7A",
+      authDomain: "tahsin-smart.firebaseapp.com",
+      projectId: "tahsin-smart",
+      storageBucket: "tahsin-smart.firebasestorage.app",
+      messagingSenderId: "573220218402",
+      appId: "1:573220218402:web:ceea8c3626a00da0d84c7b",
+      measurementId: "G-KH32CXNR8R"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -392,7 +416,7 @@ const firebaseConfig = {
     window.simpanSoal = simpanSoal; window.toggleTipeSoal = toggleTipeSoal; window.kirimSemuaJawaban = kirimSemuaJawaban;
     window.lihatJawaban = lihatJawaban; window.simpanFeedback = simpanFeedback;
     window.toggleFormPengumuman = toggleFormPengumuman; window.simpanPengumuman = simpanPengumuman;
-    window.unduhSoalWord = unduhSoalWord; 
+    window.unduhSoalWord = unduhSoalWord; window.simpanNamaCustom = simpanNamaCustom; // EXPORT FUNGSI BARU
     
     // Fitur Builder Soal
     window.tambahPilgan = tambahPilgan; window.tambahEsai = tambahEsai; 
@@ -408,22 +432,49 @@ const firebaseConfig = {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
             
-            // Simpan atau update role ke Firestore setiap kali login
-            await setDoc(doc(db, "users", user.uid), {
-                nama: user.displayName,
-                email: user.email,
-                role: role
-            }, { merge: true });
-
-            currentUser = { nama: user.displayName, role: role, uid: user.uid };
+            // Simpan UID dan Role sementara di variabel
+            currentUser = { role: role, uid: user.uid };
             
+            // Jangan langsung masuk/setup, tapi sembunyikan menu login dan tampilkan input nama asli
             document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('setup-screen').classList.remove('hidden');
-            document.getElementById(role === 'guru' ? 'setup-guru' : 'setup-murid').classList.remove('hidden');
+            
+            // Ambil nama dari Google sebagai default agar gampang diedit
+            document.getElementById('custom-user-name').value = user.displayName || "";
+            document.getElementById('name-setup-screen').classList.remove('hidden');
 
         } catch (error) {
             console.error(error);
             alert("Gagal login dengan Google: " + error.message);
+        }
+    }
+
+    // FUNGSI BARU: SIMPAN NAMA MANUAL KE FIRESTORE
+    async function simpanNamaCustom() {
+        const customName = document.getElementById('custom-user-name').value.trim();
+        if(!customName) return alert("Harap isi nama asli/resmi Anda!");
+
+        let fixRole = currentUser.role || document.getElementById('user-role').value; // Cadangan ambil dari dropdown
+        currentUser.nama = customName;
+        currentUser.role = fixRole;
+
+        // Simpan/Update data pengguna ke Firestore
+        await setDoc(doc(db, "users", currentUser.uid), {
+            nama: customName,
+            email: auth.currentUser.email,
+            role: fixRole
+        }, { merge: true });
+
+        // Sembunyikan form nama
+        document.getElementById('name-setup-screen').classList.add('hidden');
+
+        // Cek apakah sebelumnya sedang aktif di kelas (Persistence)
+        const savedClass = localStorage.getItem('activeClass');
+        if (savedClass) {
+            masukDashboard(JSON.parse(savedClass));
+        } else {
+            // Lanjut ke screen gabung kelas
+            document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById(fixRole === 'guru' ? 'setup-guru' : 'setup-murid').classList.remove('hidden');
         }
     }
 
@@ -439,27 +490,36 @@ const firebaseConfig = {
     // LISTENER GOOGLE AUTH STATE (Cek jika HP sudah login sebelumnya)
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // Ambil role yang tersimpan dari Firestore
+            // Cek apakah user ini sudah pernah mengisi nama di database kita
             const userDoc = await getDoc(doc(db, "users", user.uid));
-            if (userDoc.exists()) {
+            
+            if (userDoc.exists() && userDoc.data().nama) {
+                // Kalo SUDAH punya nama di database -> langsung masuk aja otomatis
                 const userData = userDoc.data();
                 currentUser = { nama: userData.nama, role: userData.role, uid: user.uid };
 
-                // Cek apakah sebelumnya sedang aktif di kelas tertentu (Persistence)
                 const savedClass = localStorage.getItem('activeClass');
                 if (savedClass) {
+                    document.getElementById('login-screen').classList.add('hidden');
                     masukDashboard(JSON.parse(savedClass));
                 } else {
                     document.getElementById('login-screen').classList.add('hidden');
                     document.getElementById('setup-screen').classList.remove('hidden');
                     document.getElementById(currentUser.role === 'guru' ? 'setup-guru' : 'setup-murid').classList.remove('hidden');
                 }
+            } else {
+                // Kondisi kalau baru banget pertama login Google atau belum ketik nama asli trus ga sengaja refresh
+                currentUser = { role: document.getElementById('user-role').value, uid: user.uid };
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('custom-user-name').value = user.displayName || "";
+                document.getElementById('name-setup-screen').classList.remove('hidden');
             }
         } else {
             // User benar-benar belum login
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('name-setup-screen').classList.add('hidden');
         }
     });
 
@@ -1174,7 +1234,7 @@ const firebaseConfig = {
             skor_final_100: nilai100
         }, { merge: true });
 
-        const idNilai = `${idPaket}_${namaMurid}`; // Perlu disesuaikan jika ingin pakai UID, tapi berhubung argumen function adalah namaMurid, biarkan sinkron
+        const idNilai = `${idPaket}_${namaMurid}`; 
         await setDoc(doc(db, "nilai", idNilai), { 
             kode_kelas: currentClass.kode, 
             nama: namaMurid, 
@@ -1313,4 +1373,4 @@ const firebaseConfig = {
     }
 </script>
 </body>
-    </html>
+</html>
