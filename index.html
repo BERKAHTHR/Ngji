@@ -576,36 +576,48 @@
         });
     }
 
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            
-            if (userDoc.exists() && userDoc.data().nama) {
-                const userData = userDoc.data();
-                currentUser = { nama: userData.nama, role: userData.role, uid: user.uid, email: userData.email || user.email };
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        // 1. Cek apakah user sudah punya profil di database Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        
+        if (userDoc.exists()) {
+            // DATA DITEMUKAN: Langsung ambil nama & role lama
+            const userData = userDoc.data();
+            currentUser = { 
+                nama: userData.nama, 
+                role: userData.role, 
+                uid: user.uid, 
+                email: userData.email 
+            };
 
-                const savedClass = localStorage.getItem('activeClass');
-                if (savedClass) {
-                    document.getElementById('login-screen').classList.add('hidden');
-                    masukDashboard(JSON.parse(savedClass));
-                } else {
-                    document.getElementById('login-screen').classList.add('hidden');
-                    document.getElementById('setup-screen').classList.remove('hidden');
-                    document.getElementById(currentUser.role === 'guru' ? 'setup-guru' : 'setup-murid').classList.remove('hidden');
-                }
+            // 2. Cek apakah di browser ini tersimpan kelas terakhir?
+            const savedClass = localStorage.getItem('activeClass');
+            
+            document.getElementById('login-screen').classList.add('hidden');
+            
+            if (savedClass) {
+                // Langsung masuk ke Dashboard kelas yang sama
+                masukDashboard(JSON.parse(savedClass));
             } else {
-                currentUser = { role: document.getElementById('user-role').value, uid: user.uid, email: user.email };
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('custom-user-name').value = user.displayName || "";
-                document.getElementById('name-setup-screen').classList.remove('hidden');
+                // Login aman, tapi belum pilih kelas
+                document.getElementById('setup-screen').classList.remove('hidden');
+                document.getElementById(currentUser.role === 'guru' ? 'setup-guru' : 'setup-murid').classList.remove('hidden');
             }
         } else {
-            document.getElementById('login-screen').classList.remove('hidden');
-            document.getElementById('setup-screen').classList.add('hidden');
-            document.getElementById('dashboard-screen').classList.add('hidden');
-            document.getElementById('name-setup-screen').classList.add('hidden');
+            // USER BARU: Belum pernah daftar nama
+            currentUser = { uid: user.uid, email: user.email };
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('custom-user-name').value = user.displayName || "";
+            document.getElementById('name-setup-screen').classList.remove('hidden');
         }
-    });
+    } else {
+        // TOTAL LOGOUT: Kembali ke layar login
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('dashboard-screen').classList.add('hidden');
+        document.getElementById('setup-screen').classList.add('hidden');
+    }
+});
 
     // --- 3. SETUP KELAS ---
     async function buatKelas() {
